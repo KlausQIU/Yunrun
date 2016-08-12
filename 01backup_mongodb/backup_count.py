@@ -11,6 +11,8 @@ import os
 MONGODB_HOST = "localhost"
 MONGODB_DB = "devplatform"
 MONGODB_PORT = 27017
+backup_count = 0
+
 
 def mongodb_dump(**kw):
 	dump = 'mongodump '
@@ -43,6 +45,7 @@ def delete_old(path):
 		subprocess.call(delete,shell=True)
 
 def run_backup(func, day=0, hour=0, min=0, second=0):
+	global backup_count
 	now = datetime.now()
 	strnow = now.strftime('%Y-%m-%d %H:%M:%S')
 	print "now:",strnow
@@ -59,9 +62,9 @@ def run_backup(func, day=0, hour=0, min=0, second=0):
 			path = "/home/qiu1/dump/"
 			argv = argument(db,path)
 			if argv:
-				global backup_count = 0
 				func(**argv)
 				backup_count += 1
+			print "backup count:%s"%backup_count
 			print "backup done."
 			iter_time = iter_now + period
 			strnext_time = iter_time.strftime('%Y-%m-%d %H:%M:%S')
