@@ -1,0 +1,329 @@
+<style>
+    .search_input{
+        display: none;
+        width: 100px;
+        height: 20px;
+        position: absolute;
+        left: 42px;
+        top: 8px;
+        font-weight: 100;
+        }
+    .href_hand{
+        cursor: pointer;
+        }
+</style>
+<table class="table table-striped table-hover iClass" >
+    <thead>
+        <tr>
+        {% for row in attr %}
+            {% if row['type'] == 'str' %}
+            <th style="width:auto;position: relative;">{{ row['name'] }}
+                <span class="glyphicon glyphicon-search" onclick="showInput(this,'{{ row['alias'] }}ID')"></span>
+                <input class="form-control search_input" type="text" data-name='{{ row['alias'] }}ID' placeholder="search" onkeypress="searchList()"/>            
+            </th>
+            {% end %}
+            {% if row['type'] == 'list' %}
+            <th style="width:auto;position: relative;">
+                <select data-name="categoryID" style="border:none;" onchange="categoryFilter(this)">
+                <option value="{{ row['alias'] }}">{{ row['name'] }}</option>
+                {% for category in categorys %}
+                <option value="{{ category._id }}">{{ category.alias }}</option>
+                {% end %}
+            {% end %}
+                </select>
+            </th>
+            {% if row['type'] == 'business' %}
+            <th style="width:auto;">
+              <select id="businessFilter" style="border:none;" onchange="businessFilter(this)">
+                  <option value="">{{ row['name'] }}</option>
+                  {% for c in business %}
+                      <option value="{{ c._id }}">{{ c.alias }}</option>
+                  {% end %}
+            {% end %}
+              </select>
+            </th>
+            {% if row['type'] == 'unsearch' %}
+            <th style="width:auto;position: relative;">{{ row['name'] }}</th>
+            {% end %}
+        {% end %}
+        </tr>
+        </thead>
+        <tbody>
+        {% for obj in objs %}
+        <tr>
+            {% for pro in pros %}
+                <td>
+                {% if pro == 'category'  %}{% try %}{{ obj[pro].fetch().alias if hasattr(obj,'category') else "" }}{% except %}{% end %}
+                {% elif pro == 'busines' %}
+                {% try %}{{ obj[pro].fetch().alias if hasattr(obj,"busines")  else ""  }}{% except %}{% end %}
+                {% elif pro == 'preview' %}
+                <a href="#" id="preview" data-placement="bottom" data-title="预览">预览</a>
+                <div class="hide" id="preview-content">
+                    <img src="{{ "/" + layout.preview }}" />
+                </div>{% else %}{{ obj[pro]}}{% end %}
+                {% end %}
+                </td>
+            {% try %}{% if design %}<td>
+            {% for key in design %}
+            <a onclick="getHref(this,'{{obj._id}}',{% try %}'{{ obj.system.fetch().port }}','{{ obj.url }}','{{ systemid }}'{% except %}'','',''{% end %})" data-href="{{ design[key][0] }}" data-toggle="popover" data-placement="top" data-content="{{ key }}" data-trigger="hover" target="{{ design[key][1] }}" class="{{ design[key][2] }} href_hand" data-id="{{ obj._id }}" 
+            {% if key == "配置资源" or key == "添加脚本文件" %} data-resources-container="{{ obj._id }}" {% end %}>
+                    <i class="{{ iClass[key] }}"></i></a>
+            {% end %}
+            </td>
+            {% end %}{% except %}{% end %}
+            <td>
+            {% for key in control %}
+            <a onclick="getHref(this,'{{obj._id}}','','',{% try %}'{{ systemid }}'{% except %}'{% end %})" data-href="{{ control[key][0] }}" data-toggle="popover" data-placement="top" data-content="{{ key }}" data-trigger="hover" target="{{ control[key][1] }}" class="{{ control[key][2] }} href_hand" data-id="{{ obj._id }}" {% if key == "配置资源" or key == "添加脚本文件" %} data-resources-container="{{ obj._id }}" {% end %}>
+                    <i class="{{ iClass[key] }}"></i></a>
+            {% end %}
+            {% end %}
+            </td>
+            </td>
+        </tr>
+        </tbody>
+</table>
+
+<script type="text/javascript" src="{{ static_url("js/bootstrap-switch.min.js") }}"></script>
+<script type="text/javascript" src="{{ static_url("js/user_permissions.js") }}"></script>
+<script type="text/javascript">
+
+//page/list.html
+    function category_edit(id) {
+        showLoading();
+        $.ajax({
+            type: 'get',
+            url: "edit.html?pagecategoryid=" + id,
+            dataType: 'json',
+            timeout: 5000,
+            success: function (category) 
+            {
+                hideLoading();
+                $("#edit-modal #_id").val(category._id);
+                $("#edit-modal #name").val(category.name);
+                $("#edit-modal #alias").val(category.alias);
+                $("#edit-modal #description").val(category.description);
+                $('#edit-modal').modal('show');
+            },
+        });
+    }
+
+    $(function(){
+        $('.show_edit').on('click', function(event){
+            show_edit($(this).data('id'));
+        })
+        $('.category_edit').on('click', function(event){
+            category_edit($(this).data('id'));
+        })
+        $('.show_control_edit').on('click', function(event){
+            show_control_edit($(this).data('id'));
+        })
+        $('.show_ctrl_config').on('click', function(event){
+            show_ctrl_config($(this).data('id'));
+        })
+        $('.show_sort').on('click', function(event){
+            show_sort($(this).data('id'));
+        })
+    })
+
+    function getHref(ele,_id,port,url,systemid){
+        switch($(ele).attr('data-href')){
+            case 'browse':
+                $(ele).attr('href',location.protocol+'//'+location.hostname+':'+port+url);
+                break;
+            case 'design':
+                $(ele).attr('href','../ide/index.html?target=page&id='+_id);
+                break;
+            case 'code':
+                $(ele).attr('href','../codepad/index.html?target=page&id='+_id);
+                break;
+            case 'rule_code':
+                $(ele).attr('href','../codepad/index.html?target=rule&id='+_id);
+                break;
+            case 'relation':
+                $(ele).attr('href','design/index.html?id='+_id);
+                break;
+            case 'remove':
+                $(ele).attr('href','remove.html?pageid='+_id+'&categoryid='+_id+'&objectid='+_id+'&id='+_id+'&categoryid='+_id+'&ruleid='+_id+'&moduleid='+_id+'&categoryid='+_id+'&layoutid='+_id);
+                break;
+            case 'none':
+                $(ele).attr('href','#')
+                break;
+            case 'object_edit':
+                $(ele).attr('href','edit.html?objectid='+_id);
+                break;
+            case 'handler':
+                $(ele).attr('href','/platform/'+systemid+'/object/'+_id+'/preprocess/index.html');
+                break;
+            case 'data':
+                $(ele).attr('href','/platform/'+systemid+'/object/'+_id+'/list.html');
+                break;
+            case 'doc':
+                $(ele).attr('href','doc.html');
+                break; 
+            case 'rule_doc':
+                $(ele).attr('href','doc.html?ruleid='+_id+'&controlid='+_id);
+                break; 
+            case 'control_title':
+                $(ele).attr('href','../codepad/index.html?target=tt&id='+_id);
+                break; 
+            case 'control_browse':
+                $(ele).attr('href','../codepad/index.html?target=st&id='+_id);
+                break; 
+            case 'control_data':
+                $(ele).attr('href','../codepad/index.html?target=dt&id='+_id);
+                break; 
+            case 'download':
+                $(ele).attr('href','download/'+_id);
+                break;
+            case 'module_mtt':
+                $(ele).attr('href','../codepad/index.html?target=mtt&id='+_id);
+                break;
+            case 'module_design':
+                $(ele).attr('href',"../ide/index.html?target=module&id="+_id);
+                break;
+            case 'layout_data':
+                $(ele).attr('href',"../codepad/index.html?target=layout&id="+_id);
+                break;
+            case 'layout_design':
+                $(ele).attr('href',"../ide/index.html?target=layout&id="+_id);
+                break;
+            default:
+                break;
+        }
+    }
+    function showInput(ele,str){
+        $(ele).hide();
+        $("input[data-name="+str+"]").show();
+    }
+    
+    $(document).ready(function(){
+        var parm = GetRequest();
+        if(parm && parm['categoryID'])
+        {
+            $('#cateFilter').val(parm['categoryID']);
+        }
+        
+        $("#reffer-modal #category").on("change", function(){
+            showLoading();
+            $.ajax({
+                type: 'get',
+                url: "../category/object/list.html?categoryid=" + $("#reffer-modal #category").val(),
+                dataType: 'json',
+                timeout: 5000,
+                success: function (objects) {
+                    hideLoading();
+                    $("#reffer-modal #object option").remove();
+                    if(!objects || objects.length == 0) {
+                        $("#reffer-modal #object").append("<option value=''>选择对象</option>");
+                        $('#reffer-modal #object').prop('disabled', true);
+                        $('#reffer-modal .modal-footer .btn-primary').prop('disabled', true);
+                        $('#reffer-modal #object').selectpicker('refresh');
+                        return;
+                    }
+
+                    for(var i in objects) {
+                        var obj = objects[i];
+                        $("#reffer-modal #object").append("<option value='" + obj._id + "'>" + obj.alias + "</option>");
+                    }
+                    $('#reffer-modal #object').prop('disabled', false);
+                    $('#reffer-modal #object').selectpicker('refresh');
+                    $('#reffer-modal .modal-footer .btn-primary').prop('disabled', false);
+                },
+            });
+        });
+        
+        //console.log(parm);
+        if(parm['categoryID']){
+            $('select[data-name=categoryID] option[value='+parm['categoryID']+']').prop('selected', true);    
+        }
+
+        if(parm['nameID']){
+            $('.search_input[data-name=nameID]').prev().hide();
+            $('.search_input[data-name=nameID]').show();
+            $('.search_input[data-name=nameID]').val(parm['nameID']);
+        }
+        
+        if(parm['aliasID']){
+            $('.search_input[data-name=aliasID]').prev().hide();
+            $('.search_input[data-name=aliasID]').show();
+            $('.search_input[data-name=aliasID]').val(parm['aliasID']);
+        }
+        
+        if(parm['urlID']){
+            $('.search_input[data-name=urlID]').prev().hide();
+            $('.search_input[data-name=urlID]').show();
+            $('.search_input[data-name=urlID]').val(parm['urlID']);
+        }
+
+        if(parm['tagID']){
+            $('.search_input[data-name=tagID]').prev().hide();
+            $('.search_input[data-name=tagID]').show();
+            $('.search_input[data-name=tagID]').val(parm['tagID']);
+        }
+        
+    });
+
+    function searchList(){      
+        if(event.keyCode==13){
+            var categoryID = $("select[data-name='categoryID'] option:selected").val();
+            setLocation(categoryID);
+            return false;
+        }
+    }
+    
+    function categoryFilter(ele){
+        var categoryID = ele.selectedOptions[0].value;
+        setLocation(categoryID);
+    }
+    
+    function setLocation(categoryID){
+        var parm = GetRequest();
+        var objs = $(".search_input").map(function(i,item){
+                return {
+                    'key':$(item).data('name'),
+                    'value':$(item).val()
+                }
+        });
+        var local = location.search;
+        var url = "";
+        
+        $.each(objs, function(n,item) {         
+            if(item.value){
+                url = url + item.key + "=" + item.value + "&&"; 
+            }       
+        });
+        
+		if(local.indexOf("?")>-1){ //有参数
+	    	local = local.substr(0,local.indexOf("?"));
+	    	if(categoryID==undefined){
+	    		window.location = local + "?" + url.substr(0,url.length-2);
+	    	}else{
+	    		window.location = local + "?" + url + "categoryID=" + categoryID;
+	    	}
+	    	
+	    }else{ //无参数
+	    	if(categoryID==undefined){
+	    		window.location = local + "?" + url.substr(0,url.length-2);
+	    	}else{
+	    		window.location = local + "?" + url + "categoryID=" + categoryID;
+	    	}
+	    }
+
+    }
+    
+    function GetRequest() {
+      var url = location.search;
+      var theRequest = new Object();
+      if (url.indexOf("?") != -1)
+      {
+        var str = url.substr(1);
+        strs = str.split("&");
+        for(var i = 0; i < strs.length; i ++)
+        {
+          theRequest[strs[i].split("=")[0]]=decodeURI(strs[i].split("=")[1]);
+        }
+      }
+      return theRequest;
+    }
+</script>
+
