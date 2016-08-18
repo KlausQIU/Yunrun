@@ -3,9 +3,9 @@
 
 import subprocess
 import time
-from datetime import date,datetime,timedelta
-import os
+from datetime import datetime
 from settings.base import BACKUP_COUNT,BACKUP_PATH,BACKUP_DB
+import threading
 
 # 定时器
 class Clock:
@@ -52,23 +52,31 @@ class Clock:
         times = get_time.split(',')
         for h in range(0,25):
             for t in times:
-                hour = h+int(t.split(':')[0])
                 x = lambda y :y-24 if y>=24 else y
                 interval_times.append('%s:%s'%(x(h+int(t.split(':')[0])),t.split(':')[1]))
         return interval_times
+
+
+#多线程
+def threading_run(target,args):
+    if target and args:
+        t = threading.Thread(target=target,args=args)
+        threads.append(t)
+
 
 # 备份
 def backup_run():
     init_now = datetime.now()
     today = init_now.strftime('%Y%m%d%H%M')
     argv = {}
-    db = BACKUP_DB
     path = BACKUP_PATH
     path += today
-    argv['o'] = path
-    argv['d'] = db
-    mongodb_dump(**argv)
-    delete_old(BACKUP_PATH)
+    dbs = BACKUP_DB.split(',')
+    for db in dbs:
+        argv['o'] = path
+        argv['d'] = db
+        mongodb_dump(**argv)
+        delete_old(BACKUP_PATH)
 
 def mongodb_dump(**kw):
 	now = datetime.now()
@@ -95,8 +103,15 @@ def delete_old(path):
 
 # 其他
 def other():
-    pass
+    print 'this is another task.\n'
+
 
 if __name__ == "__main__":
-	clock = Clock()
-	clock.add_task(backup_run,'11:26,11:27','00:28')
+    clock = Clock()
+    threads = []
+    threading_run(clock.add_task,(backup_run,'16:17','00:14',))
+    threading_run(clock.add_task,(other,'16:18','00:35',))
+    for t in threads:
+        t.setDaemon(True)
+        t.start()
+    t.join()
