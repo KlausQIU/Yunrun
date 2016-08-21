@@ -9,7 +9,7 @@ class Clock:
     def __init__(self):
         pass
 
-    def add_task(self,func,run_time):
+    def add_task(self,func,run_time,interval_time):
         return self.run(func,run_time)
 
     def run(self,func,run_time):
@@ -21,6 +21,8 @@ class Clock:
             time.sleep(2)
             continue
 
+def schedule_time(get_time):
+    
 #备份
 def backup_run():
     init_now = datetime.now()
@@ -56,7 +58,7 @@ def draft():
 
 if __name__ == '__main__':
     clock = Clock()
-    clock.add_task(draft,'21')
+    clock.add_task(draft,'04:00','21')
 
 
 
